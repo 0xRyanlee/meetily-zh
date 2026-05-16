@@ -12,6 +12,7 @@ import { StatusOverlays } from '@/app/_components/StatusOverlays';
 import Analytics from '@/lib/analytics';
 import { SettingsModals } from './_components/SettingsModal';
 import { TranscriptPanel } from './_components/TranscriptPanel';
+import { LiveHighlightsPanel } from './_components/LiveHighlightsPanel';
 import { useModalState } from '@/hooks/useModalState';
 import { useRecordingStateSync } from '@/hooks/useRecordingStateSync';
 import { useRecordingStart } from '@/hooks/useRecordingStart';
@@ -29,8 +30,8 @@ export default function Home() {
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
 
   // Use contexts for state management
-  const { meetingTitle } = useTranscripts();
-  const { transcriptModelConfig, selectedDevices } = useConfig();
+  const { meetingTitle, transcripts } = useTranscripts();
+  const { transcriptModelConfig, selectedDevices, modelConfig } = useConfig();
   const recordingState = useRecordingState();
 
   // Extract status from global state
@@ -213,10 +214,17 @@ export default function Home() {
         onLoadPreview={loadMeetingTranscripts}
       />
       <div className="flex flex-1 overflow-hidden">
-        <TranscriptPanel
-          isProcessingStop={isProcessingStop}
-          isStopping={isStopping}
-          showModal={showModal}
+        <div className="min-w-0 flex-1">
+          <TranscriptPanel
+            isProcessingStop={isProcessingStop}
+            isStopping={isStopping}
+            showModal={showModal}
+          />
+        </div>
+        <LiveHighlightsPanel
+          transcripts={transcripts}
+          isRecording={recordingState.isRecording}
+          modelName={modelConfig.provider === 'ollama' && modelConfig.model ? modelConfig.model : 'gemma3:1b'}
         />
 
         {/* Recording controls - only show when permissions are granted or already recording and not showing status messages */}

@@ -8,6 +8,7 @@ import logging
 from dotenv import load_dotenv
 from db import DatabaseManager
 import json
+import re
 from threading import Lock
 from transcript_processor import TranscriptProcessor
 import time
@@ -107,6 +108,16 @@ class TranscriptRequest(BaseModel):
     overlap: Optional[int] = 1000
     custom_prompt: Optional[str] = "Generate a summary of the meeting transcript."
 
+class LiveHighlightsRequest(BaseModel):
+    transcript: str
+    model: Optional[str] = "gemma3:1b"
+    max_items: Optional[int] = 5
+
+class LiveHighlightsResponse(BaseModel):
+    key_points: List[str]
+    action_items: List[str]
+    decisions: List[str]
+
 class SummaryProcessor:
     """Handles the processing of summaries in a thread-safe way"""
     def __init__(self):
@@ -168,6 +179,18 @@ class SummaryProcessor:
 # Initialize processor
 processor = SummaryProcessor()
 
+def _extract_json_object(raw_text: str) -> dict:
+    cleaned = raw_text.strip()
+    cleaned = re.sub(r"^```json\s*|\s*```$", "", cleaned, flags=re.IGNORECASE | re.MULTILINE).strip()
+
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError:
+        match = re.search(r"\{.*\}", cleaned, flags=re.DOTALL)
+        if match:
+            return json.loads(match.group(0))
+        raise
+
 # New meeting management endpoints
 @app.get("/get-meetings", response_model=List[MeetingResponse])
 async def get_meetings():
@@ -214,6 +237,56 @@ async def delete_meeting(data: DeleteMeetingRequest):
             raise HTTPException(status_code=500, detail="Failed to delete meeting")
     except Exception as e:
         logger.error(f"Error deleting meeting: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/live-highlights", response_model=LiveHighlightsResponse)
+async def generate_live_highlights(request: LiveHighlightsRequest):
+    """Generate lightweight live meeting highlights from the latest transcript window."""
+    try:
+        if not request.transcript or not request.transcript.strip():
+            return LiveHighlightsResponse(key_points=[], action_items=[], decisions=[])
+
+        from ollama import AsyncClient
+
+        max_items = max(1, min(request.max_items or 5, 8))
+        prompt = f"""
+You are generating a LIVE DRAFT meeting view from partial transcript text.
+
+Return JSON only with this exact shape:
+{{
+  "key_points": ["..."],
+  "action_items": ["..."],
+  "decisions": ["..."]
+}}
+
+Rules:
+- Use concise bullet-style sentences.
+- Keep each list to at most {max_items} items.
+- If a section has no reliable content yet, return an empty list.
+- Do not invent details that are not supported by the transcript.
+- Prefer Traditional Chinese output.
+- Treat this as incomplete live meeting context, so avoid overconfident wording.
+
+Transcript:
+{request.transcript}
+"""
+
+        client = AsyncClient()
+        response = await client.chat(
+            model=request.model or "gemma3:1b",
+            messages=[{"role": "user", "content": prompt}],
+            format="json",
+            options={"temperature": 0.2},
+        )
+
+        payload = _extract_json_object(response.message.content)
+        return LiveHighlightsResponse(
+            key_points=[str(item).strip() for item in payload.get("key_points", []) if str(item).strip()][:max_items],
+            action_items=[str(item).strip() for item in payload.get("action_items", []) if str(item).strip()][:max_items],
+            decisions=[str(item).strip() for item in payload.get("decisions", []) if str(item).strip()][:max_items],
+        )
+    except Exception as e:
+        logger.error(f"Live highlights error: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_transcript_background(process_id: str, transcript: TranscriptRequest, custom_prompt: str):
@@ -619,7 +692,7 @@ async def save_meeting_summary(data: MeetingSummaryUpdate):
 
 class TranslateRequest(BaseModel):
     text: str
-    model: Optional[str] = "llama3.2"  # Ollama model to use for translation
+    model: Optional[str] = "gemma3:1b"  # Ollama model to use for translation
 
 @app.post("/translate")
 async def translate_text(request: TranslateRequest):

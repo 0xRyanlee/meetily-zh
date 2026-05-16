@@ -107,5 +107,6 @@ export interface TranscriptSegmentData {
   timestamp: number; // audio_start_time in seconds
   endTime?: number; // audio_end_time in seconds
   text: string;
+  translation?: string;
   confidence?: number;
 }

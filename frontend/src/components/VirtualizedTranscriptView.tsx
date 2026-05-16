@@ -26,6 +26,8 @@ export interface VirtualizedTranscriptViewProps {
     enableStreaming?: boolean;
     /** Show confidence indicators */
     showConfidence?: boolean;
+    /** Show translated text below transcript */
+    showTranslation?: boolean;
     /** Completely disable auto-scroll behavior (for meeting details page) */
     disableAutoScroll?: boolean;
 
@@ -69,16 +71,20 @@ const TranscriptSegment = memo(function TranscriptSegment({
     id,
     timestamp,
     text,
+    translation,
     confidence,
     isStreaming,
     showConfidence,
+    showTranslation,
 }: {
     id: string;
     timestamp: number;
     text: string;
+    translation?: string;
     confidence?: number;
     isStreaming: boolean;
     showConfidence: boolean;
+    showTranslation: boolean;
 }) {
     const displayText = cleanStopWords(text) || (text.trim() === '' ? '[Silence]' : text);
 
@@ -101,9 +107,17 @@ const TranscriptSegment = memo(function TranscriptSegment({
                     {isStreaming ? (
                         <div className="bg-gray-100 border border-gray-200 rounded-lg px-3 py-2">
                             <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
+                            {showTranslation && translation?.trim() && (
+                                <p className="mt-1 text-sm text-amber-700 leading-relaxed">{translation}</p>
+                            )}
                         </div>
                     ) : (
-                        <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
+                        <>
+                            <p className="text-base text-gray-800 leading-relaxed">{displayText}</p>
+                            {showTranslation && translation?.trim() && (
+                                <p className="mt-1 text-sm text-amber-700 leading-relaxed">{translation}</p>
+                            )}
+                        </>
                     )}
                 </div>
             </div>
@@ -119,6 +133,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     isStopping = false,
     enableStreaming = false,
     showConfidence = true,
+    showTranslation = false,
     disableAutoScroll = false,
     hasMore = false,
     isLoadingMore = false,
@@ -296,9 +311,11 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         id={segment.id}
                                         timestamp={segment.timestamp}
                                         text={getDisplayText(segment)}
+                                        translation={segment.translation}
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        showTranslation={showTranslation}
                                     />
                                 </div>
                             );
@@ -330,7 +347,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                             className="flex items-center gap-2 mt-4 text-gray-500"
                         >
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                            <span className="text-sm">Listening...</span>
+                            <span className="text-sm">{t('transcript_listening')}</span>
                         </motion.div>
                     )}
                 </>
@@ -352,9 +369,11 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                         id={segment.id}
                                         timestamp={segment.timestamp}
                                         text={getDisplayText(segment)}
+                                        translation={segment.translation}
                                         confidence={segment.confidence}
                                         isStreaming={isStreaming}
                                         showConfidence={showConfidence}
+                                        showTranslation={showTranslation}
                                     />
                                 </motion.div>
                             );
@@ -386,7 +405,7 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                             className="flex items-center gap-2 mt-4 text-gray-500"
                         >
                             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                            <span className="text-sm">Listening...</span>
+                            <span className="text-sm">{t('transcript_listening')}</span>
                         </motion.div>
                     )}
                 </>

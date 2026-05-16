@@ -43,6 +43,7 @@ export default function SubtitleOverlayPage() {
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const translateQueueRef = useRef<Set<string>>(new Set());
+  const segmentsRef = useRef<SubtitleSegment[]>([]);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -53,6 +54,10 @@ export default function SubtitleOverlayPage() {
   useEffect(() => {
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
   }, [settings]);
+
+  useEffect(() => {
+    segmentsRef.current = segments;
+  }, [segments]);
 
   // Translate a segment via backend
   const translateSegment = useCallback(async (id: string, text: string) => {
@@ -93,17 +98,27 @@ export default function SubtitleOverlayPage() {
 
         const id = `seg-${sequence_id}`;
         const newSeg: SubtitleSegment = { id, text, translation: '' };
+        const existing = segmentsRef.current.find(s => s.id === id);
+        const textChanged = existing?.text !== text;
 
         setSegments(prev => {
-          const exists = prev.some(s => s.id === id);
-          if (exists) return prev;
-          const updated = [...prev, newSeg];
+          const updated = existing
+            ? prev.map(s =>
+                s.id === id
+                  ? {
+                      ...s,
+                      text,
+                      translation: s.text === text ? s.translation : '',
+                    }
+                  : s
+              )
+            : [...prev, newSeg];
           // Keep only last maxLines segments
           return updated.slice(-settings.maxLines);
         });
 
-        // Fire translation
-        if (settings.showTranslation) {
+        // Fire translation for new segments or updated text
+        if (settings.showTranslation && (!existing || textChanged)) {
           translateSegment(id, text);
         }
       });

@@ -99,7 +99,7 @@ function MeetingDetailsContent() {
 
         await invoke('api_save_model_config', {
           provider: 'ollama',
-          model: '',
+          model: 'gemma3:1b',
           whisperModel: 'large-v3',
           apiKey: null,
           ollamaEndpoint: null,

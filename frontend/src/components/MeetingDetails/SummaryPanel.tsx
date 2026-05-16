@@ -9,6 +9,9 @@ import { SummaryGeneratorButtonGroup } from './SummaryGeneratorButtonGroup';
 import { SummaryUpdaterButtonGroup } from './SummaryUpdaterButtonGroup';
 import Analytics from '@/lib/analytics';
 import { RefObject } from 'react';
+import { Sparkles } from 'lucide-react';
+import { StoredLiveHighlightsDraft } from '@/hooks/useLiveHighlights';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface SummaryPanelProps {
   meeting: {
@@ -48,6 +51,7 @@ interface SummaryPanelProps {
   onTemplateSelect: (templateId: string, templateName: string) => void;
   isModelConfigLoading?: boolean;
   onOpenModelSettings?: (openFn: () => void) => void;
+  liveHighlightsDraft?: StoredLiveHighlightsDraft | null;
 }
 
 export function SummaryPanel({
@@ -83,9 +87,19 @@ export function SummaryPanel({
   selectedTemplate,
   onTemplateSelect,
   isModelConfigLoading = false,
-  onOpenModelSettings
+  onOpenModelSettings,
+  liveHighlightsDraft = null,
 }: SummaryPanelProps) {
+  const { t } = useI18n();
   const isSummaryLoading = summaryStatus === 'processing' || summaryStatus === 'summarizing' || summaryStatus === 'regenerating';
+  const hasLiveDraft = !!(
+    liveHighlightsDraft &&
+    (
+      liveHighlightsDraft.key_points?.length ||
+      liveHighlightsDraft.action_items?.length ||
+      liveHighlightsDraft.decisions?.length
+    )
+  );
 
   return (
     <div className="flex-1 min-w-0 flex flex-col bg-white overflow-hidden">
@@ -197,6 +211,57 @@ export function SummaryPanel({
         </div>
       ) : transcripts?.length > 0 && (
         <div className="flex-1 overflow-y-auto min-h-0">
+          {hasLiveDraft && (
+            <div className="px-6 pt-6">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-900">
+                  <Sparkles className="h-4 w-4" />
+                  <span>{t('live_highlights_draft_title')}</span>
+                </div>
+                <p className="mb-3 text-xs text-amber-800">
+                  {t('live_highlights_draft_description')}
+                </p>
+                <div className="grid gap-3 lg:grid-cols-3">
+                  <div className="rounded-lg bg-white/80 p-3">
+                    <h4 className="mb-2 text-sm font-medium text-gray-900">{t('live_highlights_key_points')}</h4>
+                    {(liveHighlightsDraft?.key_points ?? []).length > 0 ? (
+                      <ul className="space-y-1 text-sm text-gray-700">
+                        {(liveHighlightsDraft?.key_points ?? []).map((item, index) => (
+                          <li key={`kp-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-400">{t('live_highlights_draft_none')}</p>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-white/80 p-3">
+                    <h4 className="mb-2 text-sm font-medium text-gray-900">{t('live_highlights_action_items')}</h4>
+                    {(liveHighlightsDraft?.action_items ?? []).length > 0 ? (
+                      <ul className="space-y-1 text-sm text-gray-700">
+                        {(liveHighlightsDraft?.action_items ?? []).map((item, index) => (
+                          <li key={`ai-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-400">{t('live_highlights_draft_none')}</p>
+                    )}
+                  </div>
+                  <div className="rounded-lg bg-white/80 p-3">
+                    <h4 className="mb-2 text-sm font-medium text-gray-900">{t('live_highlights_decisions')}</h4>
+                    {(liveHighlightsDraft?.decisions ?? []).length > 0 ? (
+                      <ul className="space-y-1 text-sm text-gray-700">
+                        {(liveHighlightsDraft?.decisions ?? []).map((item, index) => (
+                          <li key={`dc-${index}`}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-400">{t('live_highlights_draft_none')}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {summaryResponse && (
             <div className="fixed bottom-0 left-0 right-0 bg-white shadow-lg p-4 max-h-1/3 overflow-y-auto">
               <h3 className="text-lg font-semibold mb-2">Meeting Summary</h3>

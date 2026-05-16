@@ -17,6 +17,33 @@ import { useTemplates } from '@/hooks/meeting-details/useTemplates';
 import { useCopyOperations } from '@/hooks/meeting-details/useCopyOperations';
 import { useMeetingOperations } from '@/hooks/meeting-details/useMeetingOperations';
 import { useConfig } from '@/contexts/ConfigContext';
+import { LIVE_HIGHLIGHTS_STORAGE_KEY, StoredLiveHighlightsDraft } from '@/hooks/useLiveHighlights';
+
+function buildLiveHighlightsPrompt(draft: StoredLiveHighlightsDraft | null): string {
+  if (!draft) return '';
+
+  const sections = [
+    {
+      title: 'Live key points',
+      items: draft.key_points ?? [],
+    },
+    {
+      title: 'Live action items',
+      items: draft.action_items ?? [],
+    },
+    {
+      title: 'Live decisions',
+      items: draft.decisions ?? [],
+    },
+  ].filter((section) => section.items.length > 0);
+
+  if (!sections.length) return '';
+
+  return [
+    'Use the following live meeting draft as supporting context. Treat it as incomplete notes and reconcile it against the full transcript.',
+    ...sections.map((section) => `${section.title}:\n- ${section.items.join('\n- ')}`),
+  ].join('\n\n');
+}
 
 export default function PageContent({
   meeting,
@@ -54,7 +81,26 @@ export default function PageContent({
   });
 
   // State
-  const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [liveHighlightsDraft] = useState<StoredLiveHighlightsDraft | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem(LIVE_HIGHLIGHTS_STORAGE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw) as StoredLiveHighlightsDraft;
+    } catch {
+      return null;
+    }
+  });
+  const [customPrompt, setCustomPrompt] = useState<string>(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const raw = sessionStorage.getItem(LIVE_HIGHLIGHTS_STORAGE_KEY);
+      if (!raw) return '';
+      return buildLiveHighlightsPrompt(JSON.parse(raw) as StoredLiveHighlightsDraft);
+    } catch {
+      return '';
+    }
+  });
   const [isRecording] = useState(false);
   const [summaryResponse] = useState<SummaryResponse | null>(null);
 
@@ -146,7 +192,11 @@ export default function PageContent({
     const autoGenerate = async () => {
       if (shouldAutoGenerate && meetingData.transcripts.length > 0 && !cancelled) {
         console.log(`🤖 Auto-generating summary with ${modelConfig.provider}/${modelConfig.model}...`);
-        await summaryGeneration.handleGenerateSummary('');
+        await summaryGeneration.handleGenerateSummary(customPrompt);
+
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem(LIVE_HIGHLIGHTS_STORAGE_KEY);
+        }
 
         // Notify parent that auto-generation is complete (only if not cancelled)
         if (onAutoGenerateComplete && !cancelled) {
@@ -161,7 +211,7 @@ export default function PageContent({
     return () => {
       cancelled = true;
     };
-  }, [shouldAutoGenerate, meeting.id]); // Re-run if meeting changes
+  }, [shouldAutoGenerate, meeting.id, meetingData.transcripts.length, modelConfig.provider, modelConfig.model, customPrompt]); // Re-run if meeting changes
 
   return (
     <motion.div
@@ -226,6 +276,7 @@ export default function PageContent({
           onTemplateSelect={templates.handleTemplateSelection}
           isModelConfigLoading={false}
           onOpenModelSettings={handleRegisterModalOpen}
+          liveHighlightsDraft={liveHighlightsDraft}
         />
       </div>
     </motion.div>
