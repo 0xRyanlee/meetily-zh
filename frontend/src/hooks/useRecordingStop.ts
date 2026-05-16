@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { useTranscripts } from '@/contexts/TranscriptContext';
 import { useSidebar } from '@/components/Sidebar/SidebarProvider';
@@ -9,6 +10,7 @@ import { storageService } from '@/services/storageService';
 import { transcriptService } from '@/services/transcriptService';
 import Analytics from '@/lib/analytics';
 import { useI18n } from '@/contexts/I18nContext';
+import { useConfig } from '@/contexts/ConfigContext';
 
 type SummaryStatus = 'idle' | 'processing' | 'summarizing' | 'regenerating' | 'completed' | 'error';
 
@@ -64,6 +66,8 @@ export function useRecordingStop(
     meetings,
     setIsMeetingActive,
   } = useSidebar();
+
+  const { transcriptModelConfig } = useConfig();
 
   const router = useRouter();
 
@@ -269,6 +273,27 @@ export function useRecordingStop(
 
           // Mark meeting as saved in IndexedDB (for recovery system)
           await markMeetingAsSaved();
+
+          // Parakeet post-processing (if enabled and Whisper was used for live transcription)
+          if (transcriptModelConfig.provider === 'localWhisper' && folderPath) {
+            try {
+              const postProcessEnabled = localStorage.getItem('parakeet_post_process_enabled');
+              if (postProcessEnabled === 'true') {
+                console.log('🔄 Starting Parakeet post-processing...');
+                toast.info('Improving transcription quality with Parakeet...');
+                await invoke('start_retranscription_command', {
+                  meetingId,
+                  meetingFolderPath: folderPath,
+                  language: null,
+                  model: null,
+                  provider: 'parakeet',
+                });
+                console.log('✅ Parakeet post-processing started');
+              }
+            } catch (error) {
+              console.warn('Parakeet post-processing failed:', error);
+            }
+          }
 
           // Clean up session storage
           sessionStorage.removeItem('last_recording_folder_path');

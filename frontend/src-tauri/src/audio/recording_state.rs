@@ -22,6 +22,10 @@ pub struct AudioChunk {
     pub timestamp: f64,
     pub chunk_id: u64,
     pub device_type: DeviceType,
+    /// Pre-assigned sequence_id for streaming partial results (worker uses this instead of auto-incrementing)
+    pub sequence_id_hint: Option<u64>,
+    /// Whether this chunk is a partial/intermediate result (worker emits is_partial: true)
+    pub is_partial_hint: bool,
 }
 
 /// Processed audio chunk (post-VAD) for recording

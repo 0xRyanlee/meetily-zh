@@ -22,7 +22,7 @@ function StatusOverlay({ show, message, sidebarCollapsed }: StatusOverlayProps) 
       <div
         className="flex justify-center pl-8 transition-[margin] duration-300"
         style={{
-          marginLeft: sidebarCollapsed ? '4rem' : '16rem'
+          marginLeft: sidebarCollapsed ? '2.5rem' : '14rem'
         }}
       >
         <div className="w-2/3 max-w-[750px] flex justify-center">

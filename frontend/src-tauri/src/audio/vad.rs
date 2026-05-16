@@ -159,6 +159,29 @@ impl ContinuousVadProcessor {
         Ok(resampled)
     }
 
+    /// Returns true if VAD is currently accumulating an ongoing speech segment.
+    pub fn is_in_speech(&self) -> bool {
+        self.in_speech
+    }
+
+    /// Returns a snapshot of the current in-progress speech audio (16kHz, mono).
+    /// Returns None if not in speech or insufficient audio accumulated.
+    /// Caller uses this for streaming partial transcriptions.
+    pub fn peek_current_speech(&self) -> Option<Vec<f32>> {
+        // Need at least 800ms of speech (12800 samples @ 16kHz) before showing partials
+        const MIN_PARTIAL_SAMPLES: usize = 12800;
+        if self.in_speech && self.current_speech.len() >= MIN_PARTIAL_SAMPLES {
+            Some(self.current_speech.clone())
+        } else {
+            None
+        }
+    }
+
+    /// Returns the start time (ms from recording start) of the current speech segment.
+    pub fn current_speech_start_ms(&self) -> f64 {
+        (self.speech_start_sample as f64 / 16000.0) * 1000.0
+    }
+
     /// Flush any remaining audio and return final speech segments
     pub fn flush(&mut self) -> Result<Vec<SpeechSegment>> {
         debug!("VAD flush: in_speech={}, current_speech_len={}, buffer_len={}, speech_segments_queued={}",

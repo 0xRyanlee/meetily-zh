@@ -677,6 +677,9 @@ impl AudioCapture {
     }
 }
 
+/// How often to emit a partial transcript while speech is ongoing (milliseconds)
+const PARTIAL_TRANSCRIPT_INTERVAL_MS: u128 = 1500;
+
 /// VAD-driven audio processing pipeline
 /// Uses Voice Activity Detection to segment speech in real-time and send only speech to Whisper
 pub struct AudioPipeline {
@@ -696,6 +699,9 @@ pub struct AudioPipeline {
     mixer: ProfessionalAudioMixer,
     // Recording sender for pre-mixed audio
     recording_sender_for_mixed: Option<mpsc::UnboundedSender<AudioChunk>>,
+    // STREAMING PARTIAL TRANSCRIPTION: pre-allocated sequence_id for current utterance
+    current_partial_seq: Option<u64>,
+    last_partial_emit: std::time::Instant,
 }
 
 impl AudioPipeline {
@@ -760,6 +766,9 @@ impl AudioPipeline {
             ring_buffer,
             mixer,
             recording_sender_for_mixed: None,  // Will be set by manager
+            // Streaming partial transcription
+            current_partial_seq: None,
+            last_partial_emit: std::time::Instant::now(),
         }
     }
 
@@ -867,6 +876,39 @@ impl AudioPipeline {
                                 Err(e) => {
                                     warn!("⚠️ VAD error: {}", e);
                                 }
+                            }
+
+                            // STEP 3b: STREAMING PARTIAL — while speech is ongoing, emit a partial
+                            // every PARTIAL_TRANSCRIPT_INTERVAL_MS so text appears before speech ends.
+                            if self.vad_processor.is_in_speech() {
+                                let elapsed = self.last_partial_emit.elapsed().as_millis();
+                                if elapsed >= PARTIAL_TRANSCRIPT_INTERVAL_MS {
+                                    if let Some(partial_samples) = self.vad_processor.peek_current_speech() {
+                                        // Allocate a sequence_id for this utterance if we don't have one yet
+                                        let seq_id = *self.current_partial_seq.get_or_insert_with(|| {
+                                            use std::sync::atomic::{AtomicU64, Ordering};
+                                            static PARTIAL_SEQ: AtomicU64 = AtomicU64::new(10_000_000);
+                                            PARTIAL_SEQ.fetch_add(1, Ordering::SeqCst)
+                                        });
+                                        let start_ms = self.vad_processor.current_speech_start_ms();
+                                        let partial_chunk = AudioChunk {
+                                            data: partial_samples,
+                                            sample_rate: 16000,
+                                            timestamp: start_ms / 1000.0,
+                                            chunk_id: self.chunk_id_counter.wrapping_add(1_000_000),
+                                            device_type: DeviceType::Microphone,
+                                            sequence_id_hint: Some(seq_id),
+                                            is_partial_hint: true,
+                                        };
+                                        if self.transcription_sender.send(partial_chunk).is_ok() {
+                                            self.last_partial_emit = std::time::Instant::now();
+                                            info!("🔄 Sent partial transcript (seq_id={}, {}ms of speech)", seq_id, elapsed);
+                                        }
+                                    }
+                                }
+                            } else {
+                                // VAD is not in speech — reset partial state
+                                self.last_partial_emit = std::time::Instant::now();
                             }
 
                             // STEP 4: Send mixed audio for recording (WAV file)

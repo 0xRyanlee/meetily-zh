@@ -19,7 +19,7 @@ interface OverlaySettings {
 }
 
 const DEFAULT_SETTINGS: OverlaySettings = {
-  fontSize: 20,
+  fontSize: 16,
   bgOpacity: 0.75,
   textColor: '#ffffff',
   translationColor: '#ffd700',
@@ -61,6 +61,23 @@ export default function SubtitleOverlayPage() {
   useEffect(() => {
     segmentsRef.current = segments;
   }, [segments]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey) {
+        if (e.key === 'H' || e.key === 'h') {
+          e.preventDefault();
+          updateSetting('showTranslation', !settings.showTranslation);
+        } else if (e.key === 'Q' || e.key === 'q') {
+          e.preventDefault();
+          handleClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [settings.showTranslation]);
 
   // Translate a segment via backend
   const translateSegment = useCallback(async (id: string, text: string) => {

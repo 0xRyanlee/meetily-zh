@@ -142,6 +142,9 @@ pub fn start_transcription_task<R: Runtime>(
 
                             let chunk_timestamp = chunk.timestamp;
                             let chunk_duration = chunk.data.len() as f64 / chunk.sample_rate as f64;
+                            // Extract streaming hints before chunk is moved into transcribe_chunk_with_provider
+                            let chunk_seq_id_hint = chunk.sequence_id_hint;
+                            let chunk_is_partial_hint = chunk.is_partial_hint;
 
                             // Transcribe with provider-agnostic approach
                             match transcribe_chunk_with_provider(
@@ -191,8 +194,11 @@ pub fn start_transcription_task<R: Runtime>(
                                             info!("🔍 Speech already detected in this session, not re-emitting");
                                         }
 
-                                        // Generate sequence ID and calculate timestamps FIRST
-                                        let sequence_id = SEQUENCE_COUNTER.fetch_add(1, Ordering::SeqCst);
+                                        // Use pre-assigned sequence_id for streaming partials, otherwise auto-increment
+                                        let sequence_id = chunk_seq_id_hint
+                                            .unwrap_or_else(|| SEQUENCE_COUNTER.fetch_add(1, Ordering::SeqCst));
+                                        // Respect is_partial_hint from pipeline (streaming partial)
+                                        let is_partial = is_partial || chunk_is_partial_hint;
                                         let audio_start_time = chunk_timestamp; // Already in seconds from recording start
                                         let audio_end_time = chunk_timestamp + chunk_duration;
 

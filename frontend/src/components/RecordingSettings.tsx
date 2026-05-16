@@ -227,6 +227,23 @@ export function RecordingSettings({ onSave }: RecordingSettingsProps) {
         />
       </div>
 
+      {/* Parakeet Post-Processing Toggle */}
+      <div className="flex items-center justify-between p-4 border rounded-lg">
+        <div className="flex-1">
+          <div className="font-medium">High-Quality Transcription (Parakeet)</div>
+          <div className="text-sm text-gray-600">
+            After recording stops, re-process audio with Parakeet for better accuracy. Uses Whisper for live display, then improves with Parakeet.
+          </div>
+        </div>
+        <Switch
+          checked={localStorage.getItem('parakeet_post_process_enabled') === 'true'}
+          onCheckedChange={(checked) => {
+            localStorage.setItem('parakeet_post_process_enabled', checked.toString());
+            toast.success(checked ? 'Parakeet post-processing enabled' : 'Parakeet post-processing disabled');
+          }}
+        />
+      </div>
+
       {/* Device Preferences */}
       <div className="space-y-4">
         <div className="border-t pt-6">

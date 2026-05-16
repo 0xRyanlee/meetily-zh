@@ -79,7 +79,7 @@ export class UpdateService {
       };
     } catch (error) {
       console.error('Failed to check for updates:', error);
-      throw error;
+      return { available: false, currentVersion: 'unknown' };
     } finally {
       this.updateCheckInProgress = false;
     }

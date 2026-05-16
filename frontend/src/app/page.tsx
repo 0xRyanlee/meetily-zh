@@ -28,6 +28,8 @@ export default function Home() {
   const [isRecording, setIsRecordingState] = useState(false);
   const [barHeights, setBarHeights] = useState(['58%', '76%', '58%']);
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
+  const [highlightsWidth, setHighlightsWidth] = useState(280);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Use contexts for state management
   const { meetingTitle, transcripts } = useTranscripts();
@@ -66,6 +68,23 @@ export default function Home() {
   useEffect(() => {
     // Track page view
     Analytics.trackPageView('home');
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'H' || e.key === 'h')) {
+        e.preventDefault();
+        try {
+          const { invoke } = await import('@tauri-apps/api/core');
+          await invoke('toggle_subtitle_overlay');
+        } catch (err) {
+          console.error('Failed to toggle subtitle overlay:', err);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Startup recovery check
@@ -214,18 +233,47 @@ export default function Home() {
         onLoadPreview={loadMeetingTranscripts}
       />
       <div className="flex flex-1 overflow-hidden">
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1" style={{ maxWidth: highlightsWidth >= 400 ? undefined : '100%' }}>
           <TranscriptPanel
             isProcessingStop={isProcessingStop}
             isStopping={isStopping}
             showModal={showModal}
           />
         </div>
-        <LiveHighlightsPanel
-          transcripts={transcripts}
-          isRecording={recordingState.isRecording}
-          modelName={modelConfig.provider === 'ollama' && modelConfig.model ? modelConfig.model : 'gemma3:1b'}
-        />
+        {highlightsWidth >= 400 && (
+          <>
+            <div
+              className="w-2 flex items-center justify-center cursor-ew-resize bg-gray-100 hover:bg-gray-200 border-l border-r transition-colors"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsResizing(true);
+                const startX = e.clientX;
+                const startWidth = highlightsWidth;
+                const onMove = (me: MouseEvent) => {
+                  const dw = startX - me.clientX;
+                  const newWidth = Math.max(200, Math.min(600, startWidth + dw));
+                  setHighlightsWidth(newWidth);
+                };
+                const onUp = () => {
+                  setIsResizing(false);
+                  window.removeEventListener('mousemove', onMove);
+                  window.removeEventListener('mouseup', onUp);
+                };
+                window.addEventListener('mousemove', onMove);
+                window.addEventListener('mouseup', onUp);
+              }}
+            >
+              <div className="w-0.5 h-12 bg-gray-400 rounded-full" />
+            </div>
+            <div style={{ width: highlightsWidth - 8 }} className="flex-shrink-0">
+              <LiveHighlightsPanel
+                transcripts={transcripts}
+                isRecording={recordingState.isRecording}
+                modelName={modelConfig.provider === 'ollama' && modelConfig.model ? modelConfig.model : 'gemma3:1b'}
+              />
+            </div>
+          </>
+        )}
 
         {/* Recording controls - only show when permissions are granted or already recording and not showing status messages */}
         {(hasMicrophone || isRecording) &&
@@ -235,7 +283,7 @@ export default function Home() {
               <div
                 className="flex justify-center pl-8 transition-[margin] duration-300"
                 style={{
-                  marginLeft: sidebarCollapsed ? '4rem' : '16rem'
+                  marginLeft: sidebarCollapsed ? '2.5rem' : '14rem'
                 }}
               >
                 <div className="w-2/3 max-w-[750px] flex justify-center">
