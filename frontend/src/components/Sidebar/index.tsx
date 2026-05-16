@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
 import { useImportDialog } from '@/contexts/ImportDialogContext';
 import { useConfig } from '@/contexts/ConfigContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 import {
   Dialog,
@@ -56,6 +57,8 @@ const Sidebar: React.FC = () => {
     setMeetings,
     serverAddress
   } = useSidebar();
+
+  const { t } = useI18n();
 
   // Get recording state from RecordingStateContext (single source of truth)
   const { isRecording } = useRecordingState();
@@ -467,7 +470,7 @@ const Sidebar: React.FC = () => {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Home</p>
+              <p>{t('nav_home')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -486,7 +489,7 @@ const Sidebar: React.FC = () => {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>{isRecording ? "Recording in progress..." : "Start Recording"}</p>
+              <p>{isRecording ? t('recording_in_progress') : t('nav_start_recording')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -501,7 +504,7 @@ const Sidebar: React.FC = () => {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">
-                <p>Import Audio</p>
+                <p>{t('nav_import_audio')}</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -520,7 +523,7 @@ const Sidebar: React.FC = () => {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Meeting Notes</p>
+              <p>{t('nav_meeting_notes')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -535,7 +538,7 @@ const Sidebar: React.FC = () => {
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">
-              <p>Settings</p>
+              <p>{t('sidebar_settings')}</p>
             </TooltipContent>
           </Tooltip>
 
@@ -728,7 +731,7 @@ const Sidebar: React.FC = () => {
                 className="p-3  text-lg font-semibold items-center hover:bg-gray-100 h-10   flex mx-3 mt-3 rounded-lg cursor-pointer"
               >
                 <Home className="w-4 h-4 mr-2" />
-                <span>Home</span>
+                <span>{t('nav_home')}</span>
               </div>
             )}
           </div>
@@ -798,7 +801,7 @@ const Sidebar: React.FC = () => {
                 className="w-full flex items-center justify-center px-3 py-2 mt-1 text-sm font-medium text-gray-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors shadow-sm"
               >
                 <Upload className="w-4 h-4 mr-2" />
-                <span>Import Audio</span>
+                <span>{t('nav_import_audio')}</span>
               </button>
             )}
 
@@ -807,7 +810,7 @@ const Sidebar: React.FC = () => {
               className="w-full flex items-center justify-center px-3 py-1.5 mt-1 mb-1 text-sm font-medium text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors shadow-sm"
             >
               <Settings className="w-4 h-4 mr-2" />
-              <span>Settings</span>
+              <span>{t('sidebar_settings')}</span>
             </button>
             <Info isCollapsed={isCollapsed} />
             <div className="w-full flex items-center justify-center px-3 py-1 text-xs text-gray-400">

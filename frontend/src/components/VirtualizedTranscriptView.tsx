@@ -9,6 +9,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { RecordingStatusBar } from "./RecordingStatusBar";
 import { motion, AnimatePresence } from "framer-motion";
 import { TranscriptSegmentData } from "@/types";
+import { useI18n } from "@/contexts/I18nContext";
 
 export interface VirtualizedTranscriptViewProps {
     /** Transcript segments to display */
@@ -130,6 +131,8 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
     // Ref for infinite scroll trigger element
     const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
+    const { t } = useI18n();
+
     // Force re-render without flushSync (avoids React warning)
     const [, rerender] = useReducer((x: number) => x + 1, 0);
 
@@ -249,16 +252,16 @@ export const VirtualizedTranscriptView: React.FC<VirtualizedTranscriptViewProps>
                                 <div className={`w-3 h-3 rounded-full ${isPaused ? 'bg-orange-500' : 'bg-blue-500 animate-pulse'}`}></div>
                             </div>
                             <p className="text-sm text-gray-600">
-                                {isPaused ? 'Recording paused' : 'Listening for speech...'}
+                                {isPaused ? t('transcript_paused') : t('transcript_listening_for_speech')}
                             </p>
                             <p className="text-xs mt-1 text-gray-400">
-                                {isPaused ? 'Click resume to continue recording' : 'Speak to see live transcription'}
+                                {isPaused ? t('transcript_resume_hint') : t('transcript_speak_hint')}
                             </p>
                         </>
                     ) : (
                         <>
-                            <p className="text-lg font-semibold">Welcome to meetily!</p>
-                            <p className="text-xs mt-1">Start recording to see live transcription</p>
+                            <p className="text-lg font-semibold">{t('transcript_empty_title')}</p>
+                            <p className="text-xs mt-1">{t('transcript_empty_hint')}</p>
                         </>
                     )}
                 </motion.div>

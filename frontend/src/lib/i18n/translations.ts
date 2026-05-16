@@ -63,6 +63,13 @@ export const translations = {
     transcript_copy: '複製轉錄',
     transcript_language: '語言設定',
 
+    // ── Nav / Sidebar buttons ─────────────────────────────────────
+    nav_home: '主頁',
+    nav_start_recording: '開始錄音',
+    nav_import_audio: '匯入音訊',
+    nav_meeting_notes: '會議記錄',
+    nav_about: '關於',
+
     // ── Sidebar ──────────────────────────────────────────────────
     sidebar_new_call: '+ 新通話',
     sidebar_meetings: '會議記錄',
@@ -200,6 +207,13 @@ export const translations = {
     transcript_resume_hint: 'Click resume to continue recording',
     transcript_copy: 'Copy Transcript',
     transcript_language: 'Language',
+
+    // ── Nav / Sidebar buttons ─────────────────────────────────────
+    nav_home: 'Home',
+    nav_start_recording: 'Start Recording',
+    nav_import_audio: 'Import Audio',
+    nav_meeting_notes: 'Meeting Notes',
+    nav_about: 'About',
 
     // ── Sidebar ──────────────────────────────────────────────────
     sidebar_new_call: '+ New Call',
