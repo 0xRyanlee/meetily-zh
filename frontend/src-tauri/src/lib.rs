@@ -51,6 +51,7 @@ pub mod openrouter;
 pub mod parakeet_engine;
 pub mod state;
 pub mod summary;
+pub mod subtitle_overlay;
 pub mod tray;
 pub mod utils;
 pub mod whisper_engine;
@@ -716,6 +717,11 @@ pub fn run() {
             audio::import::start_import_audio_command,
             audio::import::cancel_import_command,
             audio::import::is_import_in_progress_command,
+            // Subtitle overlay commands
+            subtitle_overlay::show_subtitle_overlay,
+            subtitle_overlay::hide_subtitle_overlay,
+            subtitle_overlay::toggle_subtitle_overlay,
+            subtitle_overlay::is_subtitle_overlay_visible,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

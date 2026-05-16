@@ -3,7 +3,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { appDataDir } from '@tauri-apps/api/path';
 import { useCallback, useEffect, useState, useRef } from 'react';
-import { Play, Pause, Square, Mic, AlertCircle, X } from 'lucide-react';
+import { Play, Pause, Square, Mic, AlertCircle, X, Captions } from 'lucide-react';
 import { ProcessRequest, SummaryResponse } from '@/types/summary';
 import { listen } from '@tauri-apps/api/event';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -58,6 +58,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   const [isValidatingModel, setIsValidatingModel] = useState(false);
   const [speechDetected, setSpeechDetected] = useState(false);
   const [deviceError, setDeviceError] = useState<{ title: string, message: string } | null>(null);
+  const [overlayVisible, setOverlayVisible] = useState(false);
 
   const currentTime = 0;
   const duration = 0;
@@ -236,6 +237,15 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
       setIsResuming(false);
     }
   }, [isRecording, isPaused, isResuming]);
+
+  const handleToggleOverlay = useCallback(async () => {
+    try {
+      const visible = await invoke<boolean>('toggle_subtitle_overlay');
+      setOverlayVisible(visible);
+    } catch (error) {
+      console.error('Failed to toggle subtitle overlay:', error);
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -484,6 +494,25 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                       />
                     ))}
                   </div>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={handleToggleOverlay}
+                        className={`w-9 h-9 flex items-center justify-center rounded-full transition-colors ${
+                          overlayVisible
+                            ? 'bg-yellow-400 text-white hover:bg-yellow-500'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                        title="字幕浮窗 / Subtitle Overlay"
+                      >
+                        <Captions size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{overlayVisible ? '隱藏字幕浮窗 / Hide overlay' : '顯示字幕浮窗 / Show overlay'}</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </>
               )}
             </>
