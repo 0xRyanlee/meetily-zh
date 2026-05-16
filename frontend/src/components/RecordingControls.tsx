@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Analytics from '@/lib/analytics';
 import { useRecordingState } from '@/contexts/RecordingStateContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -41,6 +42,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
   selectedDevices,
   meetingName,
 }) => {
+  const { t } = useI18n();
   // Use global recording state context for pause state (syncs with tray operations)
   const recordingState = useRecordingState();
   const isPaused = recordingState.isPaused;
@@ -469,13 +471,13 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             <Square size={16} />
                             {isStopping && (
                               <div className="absolute -top-8 text-gray-600 font-medium text-xs">
-                                Stopping...
+                                {t('recording_stopping')}
                               </div>
                             )}
                           </button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Stop recording</p>
+                          <p>{t('recording_stop_button')}</p>
                         </TooltipContent>
                       </Tooltip>
                     </>
@@ -504,13 +506,13 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                             ? 'bg-yellow-400 text-white hover:bg-yellow-500'
                             : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                         }`}
-                        title="字幕浮窗 / Subtitle Overlay"
+                        title={t('overlay_title')}
                       >
                         <Captions size={16} />
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{overlayVisible ? '隱藏字幕浮窗 / Hide overlay' : '顯示字幕浮窗 / Show overlay'}</p>
+                      <p>{overlayVisible ? t('overlay_hide') : t('overlay_show')}</p>
                     </TooltipContent>
                   </Tooltip>
                 </>
@@ -522,7 +524,7 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
         {/* Show validation status only */}
         {isValidatingModel && (
           <div className="text-xs text-gray-600 text-center mt-2">
-            Validating speech recognition...
+            {t('recording_validating')}
           </div>
         )}
 

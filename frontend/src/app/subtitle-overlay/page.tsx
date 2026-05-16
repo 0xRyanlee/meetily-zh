@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface SubtitleSegment {
   id: string;
@@ -37,6 +38,7 @@ function loadSettings(): OverlaySettings {
 }
 
 export default function SubtitleOverlayPage() {
+  const { t } = useI18n();
   const [segments, setSegments] = useState<SubtitleSegment[]>([]);
   const [settings, setSettings] = useState<OverlaySettings>(DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
@@ -44,6 +46,7 @@ export default function SubtitleOverlayPage() {
   const resizeStartRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
   const translateQueueRef = useRef<Set<string>>(new Set());
   const segmentsRef = useRef<SubtitleSegment[]>([]);
+  const contentRef = useRef<HTMLDivElement | null>(null);
 
   // Load settings from localStorage on mount
   useEffect(() => {
@@ -177,15 +180,50 @@ export default function SubtitleOverlayPage() {
 
   const bgRgba = `rgba(0,0,0,${settings.bgOpacity})`;
 
+  useEffect(() => {
+    if (isResizing) return;
+
+    let cancelled = false;
+
+    const syncWindowHeight = async () => {
+      if (!contentRef.current) return;
+
+      const targetHeight = Math.max(
+        showSettings ? 220 : 64,
+        Math.min(420, Math.ceil(contentRef.current.scrollHeight + 8))
+      );
+
+      try {
+        const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+        const { PhysicalSize } = await import('@tauri-apps/api/dpi');
+        if (!cancelled) {
+          await getCurrentWebviewWindow().setSize(
+            new PhysicalSize(Math.round(window.innerWidth), targetHeight)
+          );
+        }
+      } catch {}
+    };
+
+    const frame = window.requestAnimationFrame(() => {
+      void syncWindowHeight();
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [segments, settings, showSettings, isResizing]);
+
   return (
     <div
-      className="flex flex-col w-full h-full select-none overflow-hidden"
+      ref={contentRef}
+      className="flex flex-col w-full h-auto select-none overflow-hidden"
       style={{ background: 'transparent' }}
     >
       {/* Main subtitle area — draggable */}
       <div
         data-tauri-drag-region
-        className="flex-1 flex flex-col justify-end px-3 pb-1 pt-1 rounded-xl relative"
+        className="flex flex-col justify-end px-3 pb-1 pt-1 rounded-xl relative"
         style={{
           background: bgRgba,
           cursor: isResizing ? 'nwse-resize' : 'move',
@@ -221,7 +259,7 @@ export default function SubtitleOverlayPage() {
               className="text-center opacity-30"
               style={{ fontSize: settings.fontSize, color: settings.textColor }}
             >
-              — 等待字幕 / Waiting for speech —
+              — {t('overlay_waiting')} —
             </p>
           ) : (
             segments.map((seg, i) => {
@@ -247,7 +285,7 @@ export default function SubtitleOverlayPage() {
                         textShadow: '0 1px 4px rgba(0,0,0,0.9)',
                       }}
                     >
-                      {seg.translation || '翻譯中…'}
+                      {seg.translation || t('overlay_translating')}
                     </p>
                   )}
                 </div>
@@ -276,11 +314,11 @@ export default function SubtitleOverlayPage() {
           onClick={e => e.stopPropagation()}
         >
           <div className="flex items-center justify-between">
-            <span className="text-white text-xs font-semibold">字幕設定 / Subtitle Settings</span>
+            <span className="text-white text-xs font-semibold">{t('overlay_settings')}</span>
             <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-white text-xs">✕</button>
           </div>
 
-          <SettingRow label={`字體大小 / Font size: ${settings.fontSize}px`}>
+          <SettingRow label={`${t('overlay_font_size')}: ${settings.fontSize}px`}>
             <input
               type="range" min={12} max={48} value={settings.fontSize}
               onChange={e => updateSetting('fontSize', Number(e.target.value))}
@@ -288,7 +326,7 @@ export default function SubtitleOverlayPage() {
             />
           </SettingRow>
 
-          <SettingRow label={`背景透明度 / BG opacity: ${Math.round(settings.bgOpacity * 100)}%`}>
+          <SettingRow label={`${t('overlay_bg_opacity')}: ${Math.round(settings.bgOpacity * 100)}%`}>
             <input
               type="range" min={0} max={100} value={Math.round(settings.bgOpacity * 100)}
               onChange={e => updateSetting('bgOpacity', Number(e.target.value) / 100)}
@@ -296,7 +334,7 @@ export default function SubtitleOverlayPage() {
             />
           </SettingRow>
 
-          <SettingRow label={`顯示行數 / Max lines: ${settings.maxLines}`}>
+          <SettingRow label={`${t('overlay_max_lines')}: ${settings.maxLines}`}>
             <input
               type="range" min={1} max={5} value={settings.maxLines}
               onChange={e => updateSetting('maxLines', Number(e.target.value))}
@@ -305,13 +343,13 @@ export default function SubtitleOverlayPage() {
           </SettingRow>
 
           <div className="flex items-center gap-3">
-            <span className="text-gray-300 text-xs">字色 / Text</span>
+            <span className="text-gray-300 text-xs">{t('overlay_text_color')}</span>
             <input
               type="color" value={settings.textColor}
               onChange={e => updateSetting('textColor', e.target.value)}
               className="w-7 h-6 rounded cursor-pointer border-0"
             />
-            <span className="text-gray-300 text-xs">譯色 / Trans</span>
+            <span className="text-gray-300 text-xs">{t('overlay_translation_color')}</span>
             <input
               type="color" value={settings.translationColor}
               onChange={e => updateSetting('translationColor', e.target.value)}
@@ -325,7 +363,7 @@ export default function SubtitleOverlayPage() {
               onChange={e => updateSetting('showTranslation', e.target.checked)}
               className="accent-yellow-400"
             />
-            <span className="text-gray-300 text-xs">顯示中文翻譯 / Show Chinese translation</span>
+            <span className="text-gray-300 text-xs">{t('overlay_show_translation')}</span>
           </label>
         </div>
       )}

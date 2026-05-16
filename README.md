@@ -13,9 +13,9 @@
 | **即時英→中翻譯** | Real-time English-to-Chinese translation displayed below each transcript segment during recording. Powered by the built-in AI model (gemma3, already downloaded — no extra download). |
 | **字幕浮窗** | Translucent always-on-top subtitle overlay window with original text and Chinese translation, plus drag, resize, and display controls. |
 | **即時重點整理** | Live draft highlights panel during recording with key points, action items, and decisions, followed by full post-meeting summary generation. |
-| **會議事後分析** *(planned)* | Speaker diarization + role-based structured analysis + A/B option comparison summaries. |
+| **會議事後分析** *(planned)* | Speaker diarization、角色化結構分析與 A/B 方案比較摘要仍在規劃中；目前這個 fork 尚未提供多人說話者辨識。 |
 
-Synced from upstream: **v0.3.0**. See [upstream releases](https://github.com/Zackriya-Solutions/meetily/releases) for full changelog.
+Fork note: upstream roadmap mentions speaker identification, but it is not implemented in this fork yet. See [upstream releases](https://github.com/Zackriya-Solutions/meetily/releases) for broader changelog context.
 
 ---
 

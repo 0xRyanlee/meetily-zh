@@ -613,6 +613,8 @@ impl AudioCapture {
             timestamp,
             chunk_id,
             device_type: self.device_type.clone(),
+            sequence_id_hint: None,
+            is_partial_hint: false,
         };
 
         // NOTE: Raw audio is NOT sent to recording saver to prevent echo
@@ -719,12 +721,10 @@ impl AudioPipeline {
         // For now, we log it for monitoring and potential optimization
         let _ = (mic_device_name, mic_device_kind, system_device_name, system_device_kind);
 
-        // Create VAD processor with balanced redemption time for speech accumulation
-        // The VAD processor now handles 48kHz->16kHz resampling internally
-        // This bridges natural pauses without excessive fragmentation
-        // For mac os core audio, 900ms, for windows 400ms seems good
-
-        let redemption_time = if cfg!(target_os = "macos") { 400 } else { 400 };
+        // Keep VAD segments shorter so live transcript updates appear sooner.
+        // This is still a compromise: short enough for better live UX, long enough
+        // to avoid fragmenting every micro-pause in speech.
+        let redemption_time = if cfg!(target_os = "macos") { 220 } else { 220 };
 
         let vad_processor = match ContinuousVadProcessor::new(sample_rate, redemption_time) {
             Ok(processor) => {
@@ -841,12 +841,16 @@ impl AudioPipeline {
                                             info!("📤 Sending VAD segment: {:.1}ms, {} samples",
                                                   duration_ms, segment.samples.len());
 
+                                            // Determine if this segment was preceded by partials
+                                            let seq_hint = self.current_partial_seq.take();
                                             let transcription_chunk = AudioChunk {
                                                 data: segment.samples,
                                                 sample_rate: 16000,
                                                 timestamp: segment.start_timestamp_ms / 1000.0,
                                                 chunk_id: self.chunk_id_counter,
                                                 device_type: DeviceType::Microphone,  // Mixed audio
+                                                sequence_id_hint: seq_hint,
+                                                is_partial_hint: false,
                                             };
 
                                             if let Err(e) = self.transcription_sender.send(transcription_chunk) {
@@ -873,6 +877,8 @@ impl AudioPipeline {
                                     timestamp: chunk.timestamp,
                                     chunk_id: self.chunk_id_counter,
                                     device_type: DeviceType::Microphone,  // Mixed audio
+                                    sequence_id_hint: None,
+                                    is_partial_hint: false,
                                 };
                                 let _ = sender.send(recording_chunk);
                             }
@@ -911,12 +917,15 @@ impl AudioPipeline {
                         info!("📤 Sending final VAD segment to Whisper: {:.1}ms duration, {} samples",
                               duration_ms, segment.samples.len());
 
+                        let seq_hint = self.current_partial_seq.take();
                         let transcription_chunk = AudioChunk {
                             data: segment.samples,
                             sample_rate: 16000,
                             timestamp: segment.start_timestamp_ms / 1000.0,
                             chunk_id: self.chunk_id_counter,
                             device_type: DeviceType::Microphone,
+                            sequence_id_hint: seq_hint,
+                            is_partial_hint: false,
                         };
 
                         if let Err(e) = self.transcription_sender.send(transcription_chunk) {
@@ -1039,6 +1048,8 @@ impl AudioPipelineManager {
                 timestamp: 0.0,
                 chunk_id: u64::MAX, // Special ID to indicate flush
                 device_type: super::recording_state::DeviceType::Microphone,
+                sequence_id_hint: None,
+                is_partial_hint: false,
             };
 
             if let Err(e) = sender.send(flush_chunk) {
@@ -1059,6 +1070,8 @@ impl AudioPipelineManager {
                         timestamp: 0.0,
                         chunk_id: u64::MAX - (i as u64),
                         device_type: super::recording_state::DeviceType::Microphone,
+                        sequence_id_hint: None,
+                        is_partial_hint: false,
                     };
                     let _ = sender.send(additional_flush);
                 }

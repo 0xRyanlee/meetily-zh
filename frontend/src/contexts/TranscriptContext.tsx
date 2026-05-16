@@ -33,9 +33,10 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
   const [currentMeetingId, setCurrentMeetingId] = useState<string | null>(null);
   const [translationEnabled, setTranslationEnabledState] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('zhTranslationEnabled') === 'true';
+      const stored = localStorage.getItem('zhTranslationEnabled');
+      return stored === null ? true : stored === 'true';
     }
-    return false;
+    return true;
   });
 
   const setTranslationEnabled = useCallback((enabled: boolean) => {
@@ -258,24 +259,55 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
 
       if (allNewTranscripts.length > 0) {
         setTranscripts(prev => {
-          // Create a set of existing sequence_ids for deduplication
-          const existingSequenceIds = new Set(prev.map(t => t.sequence_id).filter(id => id !== undefined));
+          const existingBySequenceId = new Map<number, Transcript>();
+          const nonSequencedTranscripts: Transcript[] = [];
 
-          // Filter out any new transcripts that already exist
-          const uniqueNewTranscripts = allNewTranscripts.filter(transcript =>
-            transcript.sequence_id !== undefined && !existingSequenceIds.has(transcript.sequence_id)
-          );
+          prev.forEach(transcript => {
+            if (transcript.sequence_id === undefined) {
+              nonSequencedTranscripts.push(transcript);
+            } else {
+              existingBySequenceId.set(transcript.sequence_id, transcript);
+            }
+          });
 
-          // Only combine if we have unique new transcripts
-          if (uniqueNewTranscripts.length === 0) {
-            console.log('No unique transcripts to add - all were duplicates');
-            return prev; // No new unique transcripts to add
+          let changedCount = 0;
+
+          allNewTranscripts.forEach(transcript => {
+            if (transcript.sequence_id === undefined) {
+              nonSequencedTranscripts.push(transcript);
+              changedCount += 1;
+              return;
+            }
+
+            const existing = existingBySequenceId.get(transcript.sequence_id);
+            const hasChanged =
+              !existing ||
+              existing.text !== transcript.text ||
+              existing.is_partial !== transcript.is_partial ||
+              existing.confidence !== transcript.confidence ||
+              existing.audio_end_time !== transcript.audio_end_time;
+
+            if (!hasChanged) {
+              return;
+            }
+
+            changedCount += 1;
+            existingBySequenceId.set(
+              transcript.sequence_id,
+              existing?.translation
+                ? { ...transcript, translation: existing.translation }
+                : transcript
+            );
+          });
+
+          if (changedCount === 0) {
+            console.log('No transcript changes to apply');
+            return prev;
           }
 
-          console.log(`Adding ${uniqueNewTranscripts.length} unique transcripts out of ${allNewTranscripts.length} received`);
+          console.log(`Applying ${changedCount} transcript changes out of ${allNewTranscripts.length} buffered items`);
 
-          // Merge with existing transcripts, maintaining chronological order
-          const combined = [...prev, ...uniqueNewTranscripts];
+          const combined = [...nonSequencedTranscripts, ...existingBySequenceId.values()];
 
           // Sort by chunk_start_time first, then by sequence_id
           return combined.sort((a, b) => {
@@ -310,12 +342,6 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
             buffer_size_before: transcriptBuffer.size
           });
 
-          // Check for duplicate sequence_id before processing
-          if (transcriptBuffer.has(update.sequence_id)) {
-            console.log('🚫 MAIN LISTENER: Duplicate sequence_id, skipping buffer:', update.sequence_id);
-            return;
-          }
-
           // Create transcript for buffer with NEW timestamp fields
           const newTranscript: Transcript = {
             id: `${Date.now()}-${transcriptCounter++}`,
@@ -331,7 +357,7 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
             duration: update.duration,
           };
 
-          // Add to buffer
+          // Add or replace buffered transcript for this sequence_id so later updates win
           transcriptBuffer.set(update.sequence_id, newTranscript);
           console.log(`✅ MAIN LISTENER: Buffered transcript with sequence_id ${update.sequence_id}. Buffer size: ${transcriptBuffer.size}, Last processed: ${lastProcessedSequence}`);
 

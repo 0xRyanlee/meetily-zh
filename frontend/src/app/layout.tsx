@@ -2,6 +2,7 @@
 
 import './globals.css'
 import { Source_Sans_3 } from 'next/font/google'
+import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { SidebarProvider } from '@/components/Sidebar/SidebarProvider'
 import MainContent from '@/components/MainContent'
@@ -69,6 +70,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
+  const pathname = usePathname()
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingCompleted, setOnboardingCompleted] = useState(false)
 
@@ -229,6 +231,19 @@ export default function RootLayout({
     setOnboardingCompleted(true)
     // Optionally reload the window to ensure all state is fresh
     window.location.reload()
+  }
+
+  if (pathname === '/subtitle-overlay') {
+    return (
+      <html lang="en">
+        <body
+          className={`${sourceSans3.variable} font-sans antialiased bg-transparent text-white`}
+          style={{ background: 'transparent' }}
+        >
+          <I18nProvider>{children}</I18nProvider>
+        </body>
+      </html>
+    )
   }
 
   return (
