@@ -1,4 +1,23 @@
 <div align="center" style="border-bottom: none">
+
+> **This is a community fork of [Zackriya-Solutions/meetily](https://github.com/Zackriya-Solutions/meetily).**
+> Fork maintained by [@0xRyanlee](https://github.com/0xRyanlee). Additional features listed below.
+
+---
+
+## 🆕 Fork Extra Features
+
+| Feature | Description |
+|---------|-------------|
+| **繁體中文 UI** | App defaults to Traditional Chinese interface. One-click toggle to English (`EN` button, top-right). |
+| **即時英→中翻譯** | Real-time English-to-Chinese translation displayed below each transcript segment during recording. Powered by the built-in AI model (gemma3, already downloaded — no extra download). |
+| **字幕浮窗** *(planned)* | Translucent always-on-top subtitle overlay window — drag, resize, customisable font. |
+| **會議事後分析** *(planned)* | Speaker diarization + role-based structured analysis + A/B option comparison summaries. |
+
+Synced from upstream: **v0.3.0**. See [upstream releases](https://github.com/Zackriya-Solutions/meetily/releases) for full changelog.
+
+---
+
     <h1>
         <img src="docs/Meetily-6.png" style="border-radius: 10px;" />
         <br>

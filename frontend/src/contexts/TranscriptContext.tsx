@@ -7,6 +7,7 @@ import { useRecordingState } from './RecordingStateContext';
 import { transcriptService } from '@/services/transcriptService';
 import { recordingService } from '@/services/recordingService';
 import { indexedDBService } from '@/services/indexedDBService';
+import { translateToChineseAPI } from '@/services/translationService';
 
 interface TranscriptContextType {
   transcripts: Transcript[];
@@ -20,6 +21,8 @@ interface TranscriptContextType {
   clearTranscripts: () => void;
   currentMeetingId: string | null;
   markMeetingAsSaved: () => Promise<void>;
+  translationEnabled: boolean;
+  setTranslationEnabled: (enabled: boolean) => void;
 }
 
 const TranscriptContext = createContext<TranscriptContextType | undefined>(undefined);
@@ -28,6 +31,17 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [meetingTitle, setMeetingTitle] = useState('+ New Call');
   const [currentMeetingId, setCurrentMeetingId] = useState<string | null>(null);
+  const [translationEnabled, setTranslationEnabledState] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('zhTranslationEnabled') === 'true';
+    }
+    return false;
+  });
+
+  const setTranslationEnabled = useCallback((enabled: boolean) => {
+    localStorage.setItem('zhTranslationEnabled', String(enabled));
+    setTranslationEnabledState(enabled);
+  }, []);
 
   // Recording state context - provides backend-synced state
   const recordingState = useRecordingState();
@@ -509,6 +523,29 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
     }
   }, [currentMeetingId]);
 
+  // Translate newly-added transcripts whenever translationEnabled is on
+  const translatingIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!translationEnabled) return;
+
+    const untranslated = transcripts.filter(
+      t => t.text.trim() && !t.translation && !translatingIdsRef.current.has(t.id)
+    );
+
+    untranslated.forEach(t => {
+      translatingIdsRef.current.add(t.id);
+      translateToChineseAPI(t.text).then(translation => {
+        setTranscripts(prev =>
+          prev.map(item => item.id === t.id ? { ...item, translation } : item)
+        );
+      }).catch(() => {
+        // silent fail — translation is best-effort
+      }).finally(() => {
+        translatingIdsRef.current.delete(t.id);
+      });
+    });
+  }, [transcripts, translationEnabled]);
+
   const value: TranscriptContextType = {
     transcripts,
     transcriptsRef,
@@ -521,6 +558,8 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
     clearTranscripts,
     currentMeetingId,
     markMeetingAsSaved,
+    translationEnabled,
+    setTranslationEnabled,
   };
 
   return (

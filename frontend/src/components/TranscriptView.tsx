@@ -6,6 +6,7 @@ import { ConfidenceIndicator } from './ConfidenceIndicator';
 import { Tooltip, TooltipContent, TooltipTrigger } from './ui/tooltip';
 import { RecordingStatusBar } from './RecordingStatusBar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useI18n } from '@/contexts/I18nContext';
 
 interface TranscriptViewProps {
   transcripts: Transcript[];
@@ -105,6 +106,7 @@ function cleanStopWords(text: string): string {
 }
 
 export const TranscriptView: React.FC<TranscriptViewProps> = ({ transcripts, isRecording = false, isPaused = false, isProcessing = false, isStopping = false, enableStreaming = false }) => {
+  const { t } = useI18n();
   const [speechDetected, setSpeechDetected] = useState(false);
 
   // Debug: Log the props to understand what's happening
@@ -343,7 +345,7 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ transcripts, isR
           className="flex items-center gap-2 mt-4 text-gray-500"
         >
           <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-          <span className="text-sm">Listening...</span>
+          <span className="text-sm">{t('transcript_listening')}</span>
         </motion.div>
       )}
 
@@ -360,18 +362,16 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ transcripts, isR
                 <div className={`w-3 h-3 rounded-full ${isPaused ? 'bg-orange-500' : 'bg-blue-500 animate-pulse'}`}></div>
               </div>
               <p className="text-sm text-gray-600">
-                {isPaused ? 'Recording paused' : 'Listening for speech...'}
+                {isPaused ? t('transcript_paused') : t('transcript_listening_for_speech')}
               </p>
               <p className="text-xs mt-1 text-gray-400">
-                {isPaused
-                  ? 'Click resume to continue recording'
-                  : 'Speak to see live transcription'}
+                {isPaused ? t('transcript_resume_hint') : t('transcript_speak_hint')}
               </p>
             </>
           ) : (
             <>
-              <p className="text-lg font-semibold">Welcome to meetily!</p>
-              <p className="text-xs mt-1">Start recording to see live transcription</p>
+              <p className="text-lg font-semibold">{t('transcript_empty_title')}</p>
+              <p className="text-xs mt-1">{t('transcript_empty_hint')}</p>
             </>
           )}
         </motion.div>

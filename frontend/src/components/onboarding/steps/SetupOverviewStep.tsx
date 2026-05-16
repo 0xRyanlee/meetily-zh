@@ -4,6 +4,7 @@ import { Download, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OnboardingContainer } from '../OnboardingContainer';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useI18n } from '@/contexts/I18nContext';
 import {
   Tooltip,
   TooltipContent,
@@ -13,6 +14,7 @@ import {
 
 export function SetupOverviewStep() {
   const { goNext } = useOnboarding();
+  const { t } = useI18n();
   const [recommendedModel, setRecommendedModel] = useState<string>('gemma3:1b');
   const [modelSize, setModelSize] = useState<string>('~806 MB');
   const [isMac, setIsMac] = useState(false);
@@ -44,16 +46,8 @@ export function SetupOverviewStep() {
   }, []);
 
   const steps = [
-    {
-      number: 1,
-      type: 'transcription',
-      title: 'Download Transcription Engine',
-    },
-    {
-      number: 2,
-      type: 'summarization',
-      title: 'Download Summarization Engine',
-    },
+    { number: 1, type: 'transcription', title: t('setup_step_transcription') },
+    { number: 2, type: 'summarization', title: t('setup_step_summarization') },
   ];
 
   const handleContinue = () => {
@@ -62,8 +56,8 @@ export function SetupOverviewStep() {
 
   return (
     <OnboardingContainer
-      title="Setup Overview"
-      description="Meetily requires that you download the Transcription & Summarization AI models for the software to work."
+      title={t('setup_title')}
+      description={t('setup_subtitle')}
       step={2}
       totalSteps={isMac ? 4 : 3}
     >
@@ -90,8 +84,7 @@ export function SetupOverviewStep() {
                                 </button>
                                 </TooltipTrigger>
                                 <TooltipContent className="max-w-xs text-sm">
-                                You can also select external AI providers like OpenAI, Claude, or
-                                Ollama for summary generation in settings.
+                                  {t('setup_summarization_tooltip')}
                                 </TooltipContent>
                             </Tooltip>
                             </TooltipProvider>
@@ -111,7 +104,7 @@ export function SetupOverviewStep() {
             onClick={handleContinue}
             className="w-full h-11 bg-gray-900 hover:bg-gray-800 text-white"
           >
-            Let's Go
+            {t('setup_cta')}
           </Button>
           <div className="text-center">
             <a
@@ -120,7 +113,7 @@ export function SetupOverviewStep() {
               rel="noopener noreferrer"
               className="text-xs text-gray-600 hover:underline"
             >
-              Report issues on GitHub
+              {t('setup_github')}
             </a>
           </div>
         </div>

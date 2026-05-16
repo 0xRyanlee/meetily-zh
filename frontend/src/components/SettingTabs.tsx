@@ -3,6 +3,8 @@ import { ModelConfig, ModelSettingsModal } from "./ModelSettingsModal"
 import { TranscriptModelProps, TranscriptSettings } from "./TranscriptSettings"
 import { RecordingSettings, RecordingPreferences } from "./RecordingSettings"
 import { About } from "./About";
+import { LangToggle } from "./LangToggle";
+import { useI18n } from "@/contexts/I18nContext";
 
 interface SettingTabsProps {
     modelConfig: ModelConfig;
@@ -26,18 +28,23 @@ export function SettingTabs({
     onSaveTranscript,
 }: SettingTabsProps) {
 
+    const { t } = useI18n();
+
     const handleTabChange = () => {
-        setSaveSuccess(null); // Reset save success when tab changes
+        setSaveSuccess(null);
     };
 
     return (
         <Tabs defaultValue={defaultTab} className="w-full max-h-[calc(100vh-10rem)] overflow-y-auto" onValueChange={handleTabChange}>
-  <TabsList>
-    <TabsTrigger value="transcriptSettings">Transcript</TabsTrigger>
-    <TabsTrigger value="modelSettings">Ai Summary</TabsTrigger>
-    <TabsTrigger value="recordingSettings">Preferences</TabsTrigger>
-    <TabsTrigger value="about">About</TabsTrigger>
-  </TabsList>
+  <div className="flex items-center justify-between mb-1">
+    <TabsList>
+      <TabsTrigger value="transcriptSettings">{t('settings_transcription')}</TabsTrigger>
+      <TabsTrigger value="modelSettings">{t('settings_summary')}</TabsTrigger>
+      <TabsTrigger value="recordingSettings">{t('settings_general')}</TabsTrigger>
+      <TabsTrigger value="about">About</TabsTrigger>
+    </TabsList>
+    <LangToggle />
+  </div>
   <TabsContent value="modelSettings">
     <ModelSettingsModal
 

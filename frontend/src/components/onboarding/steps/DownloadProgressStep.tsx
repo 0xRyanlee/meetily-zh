@@ -5,6 +5,7 @@ import { Mic, Sparkles, Check, Loader2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { OnboardingContainer } from '../OnboardingContainer';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useI18n } from '@/contexts/I18nContext';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,6 +34,7 @@ export function DownloadProgressStep() {
     startBackgroundDownloads,
     completeOnboarding,
   } = useOnboarding();
+  const { t } = useI18n();
 
   const [recommendedModel, setRecommendedModel] = useState<string>('gemma3:1b');
   const [isMac, setIsMac] = useState(false);
@@ -90,8 +92,8 @@ export function DownloadProgressStep() {
         error: error instanceof Error ? error.message : 'Retry failed',
       }));
 
-      toast.error('Download retry failed', {
-        description: 'Please check your connection and try again.',
+      toast.error(t('download_failed'), {
+        description: t('download_error_connection'),
       });
     } finally {
       // Allow retry again after 2 seconds
@@ -133,8 +135,8 @@ export function DownloadProgressStep() {
         error: error instanceof Error ? error.message : 'Retry failed',
       }));
 
-      toast.error('Summary model download retry failed', {
-        description: 'Please check your connection and try again.',
+      toast.error(t('download_failed'), {
+        description: t('download_error_connection'),
       });
     } finally {
       // Allow retry again after 2 seconds
@@ -308,8 +310,8 @@ export function DownloadProgressStep() {
           progress: 100,
         }));
       } else if (!actuallyAvailable && parakeetState.status === 'error') {
-        toast.error('Transcription engine required', {
-          description: 'Please retry the download before continuing.',
+        toast.error(t('download_transcription'), {
+          description: t('download_error_connection'),
         });
         return;
       }
@@ -323,8 +325,8 @@ export function DownloadProgressStep() {
 
     // Show toast if downloads still in progress
     if (!downloadsComplete) {
-      toast.info('Downloads will continue in the background', {
-        description: 'You can start using the app. Recording will be available once speech recognition is ready.',
+      toast.info(t('download_continue_bg'), {
+        description: t('download_continue_bg_desc'),
         duration: 5000,
       });
     }
@@ -356,7 +358,8 @@ export function DownloadProgressStep() {
     title: string,
     icon: React.ReactNode,
     state: DownloadState,
-    modelSize: string
+    modelSize: string,
+    onRetry: () => void
   ) => (
     <div className="bg-white rounded-xl border border-gray-200 p-5">
       <div className="flex items-center justify-between mb-4">
@@ -371,7 +374,7 @@ export function DownloadProgressStep() {
         </div>
         <div>
           {state.status === 'waiting' && (
-            <span className="text-sm text-gray-500">Waiting...</span>
+            <span className="text-sm text-gray-500">{t('download_waiting')}</span>
           )}
           {state.status === 'downloading' && (
             <Loader2 className="w-5 h-5 text-gray-700 animate-spin" />
@@ -382,12 +385,11 @@ export function DownloadProgressStep() {
             </div>
           )}
           {state.status === 'error' && (
-            <span className="text-sm text-red-500">Failed</span>
+            <span className="text-sm text-red-500">{t('download_failed')}</span>
           )}
         </div>
       </div>
 
-      {/* Progress Bar */}
       {(state.status === 'downloading' || state.status === 'completed') && (
         <div className="space-y-2">
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -402,13 +404,9 @@ export function DownloadProgressStep() {
             </span>
             <div className="flex items-center gap-2">
               {state.speedMbps > 0 && (
-                <span className="text-gray-500">
-                  {state.speedMbps.toFixed(1)} MB/s
-                </span>
+                <span className="text-gray-500">{state.speedMbps.toFixed(1)} MB/s</span>
               )}
-              <span className="font-semibold text-gray-900">
-                {Math.round(state.progress)}%
-              </span>
+              <span className="font-semibold text-gray-900">{Math.round(state.progress)}%</span>
             </div>
           </div>
         </div>
@@ -416,20 +414,18 @@ export function DownloadProgressStep() {
 
       {state.status === 'error' && state.error && (
         <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm text-red-600 font-medium">Download Error</p>
+          <p className="text-sm text-red-600 font-medium">{t('download_error_title')}</p>
           <p className="text-xs text-red-500 mt-1">{state.error}</p>
-          {(title === 'Transcription Engine' || title === 'Summary Engine') && (
-            <button
-              onClick={title === 'Transcription Engine' ? handleRetryDownload : handleRetrySummaryDownload}
-              className="mt-3 w-full h-9 px-4 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Try Again
-            </button>
-          )}
+          <button
+            onClick={onRetry}
+            className="mt-3 w-full h-9 px-4 bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {t('download_retry')}
+          </button>
         </div>
       )}
     </div>
@@ -437,30 +433,29 @@ export function DownloadProgressStep() {
 
   return (
     <OnboardingContainer
-      title="Getting things ready"
-      description="You can start using Meetily after downloading the Transcription Engine."
+      title={t('download_title')}
+      description={t('download_subtitle')}
       step={3}
       totalSteps={isMac ? 4 : 3}
     >
       <div className="flex flex-col items-center space-y-6">
-        {/* Download Cards */}
         <div className="w-full max-w-lg space-y-4">
           {renderDownloadCard(
-            'Transcription Engine',
+            t('download_transcription'),
             <Mic className="w-5 h-5 text-gray-600" />,
             parakeetState,
-            '~670 MB'
+            '~670 MB',
+            handleRetryDownload
           )}
-
           {renderDownloadCard(
-            'Summary Engine',
+            t('download_summary'),
             <Sparkles className="w-5 h-5 text-gray-600" />,
             gemmaState,
-            recommendedModel === 'gemma3:4b' ? '~2.5 GB' : '~806 MB'
+            recommendedModel === 'gemma3:4b' ? '~2.5 GB' : '~806 MB',
+            handleRetrySummaryDownload
           )}
         </div>
 
-        {/* Info Message - Only show when Parakeet is downloaded */}
         <AnimatePresence>
           {parakeetDownloaded && !summaryModelDownloaded && (
             <motion.div
@@ -473,17 +468,14 @@ export function DownloadProgressStep() {
               <div className="flex items-start gap-3">
                 <Download className="w-5 h-5 text-gray-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">You can continue while this finishes</p>
-                  <p className="text-gray-700 mt-1">
-                    Download will continue in the background.
-                  </p>
+                  <p className="font-medium">{t('download_continue_bg')}</p>
+                  <p className="text-gray-700 mt-1">{t('download_continue_bg_desc')}</p>
                 </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Continue Button */}
         <div className="w-full max-w-xs">
           <Button
             onClick={handleContinue}
@@ -493,7 +485,7 @@ export function DownloadProgressStep() {
             {(isCompleting || !parakeetDownloaded) ? (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             ) : (
-              'Continue'
+              t('download_cta')
             )}
           </Button>
         </div>

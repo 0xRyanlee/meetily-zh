@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProgressIndicator } from './shared/ProgressIndicator';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { LangToggle } from '@/components/LangToggle';
 import type { OnboardingContainerProps } from '@/types/onboarding';
 
 export function OnboardingContainer({
@@ -44,6 +45,10 @@ export function OnboardingContainer({
 
   return (
     <div className="fixed inset-0 bg-gray-50 flex items-center justify-center z-50 overflow-hidden">
+      {/* Language toggle — fixed top-right */}
+      <div className="absolute top-4 right-4 z-10">
+        <LangToggle />
+      </div>
       <div className={cn('w-full max-w-2xl h-full max-h-screen flex flex-col px-6 py-6', className)}>
         {/* Progress Indicator with Navigation - Fixed */}
         {step && !hideProgress && (

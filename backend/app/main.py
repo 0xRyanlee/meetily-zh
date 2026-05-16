@@ -617,6 +617,34 @@ async def save_meeting_summary(data: MeetingSummaryUpdate):
         logger.error(f"Error saving meeting summary: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
+class TranslateRequest(BaseModel):
+    text: str
+    model: Optional[str] = "llama3.2"  # Ollama model to use for translation
+
+@app.post("/translate")
+async def translate_text(request: TranslateRequest):
+    """Translate English text to Traditional Chinese using a local Ollama model"""
+    try:
+        if not request.text or not request.text.strip():
+            return {"translation": ""}
+
+        from ollama import AsyncClient
+        client = AsyncClient()
+        prompt = (
+            f"Translate the following English text to Traditional Chinese (繁體中文). "
+            f"Output only the translated text, no explanations.\n\n{request.text}"
+        )
+        response = await client.chat(
+            model=request.model,
+            messages=[{"role": "user", "content": prompt}],
+            options={"temperature": 0.1},
+        )
+        translation = response.message.content.strip()
+        return {"translation": translation}
+    except Exception as e:
+        logger.error(f"Translation error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
 class SearchRequest(BaseModel):
     query: str
 

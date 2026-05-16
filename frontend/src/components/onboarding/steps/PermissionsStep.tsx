@@ -5,9 +5,11 @@ import { Button } from '@/components/ui/button';
 import { OnboardingContainer } from '../OnboardingContainer';
 import { PermissionRow } from '../shared';
 import { useOnboarding } from '@/contexts/OnboardingContext';
+import { useI18n } from '@/contexts/I18nContext';
 
 export function PermissionsStep() {
   const { setPermissionStatus, setPermissionsSkipped, permissions, completeOnboarding } = useOnboarding();
+  const { t } = useI18n();
   const [isPending, setIsPending] = useState(false);
 
   // Check permissions - only logs current state, doesn't auto-authorize
@@ -113,53 +115,46 @@ export function PermissionsStep() {
 
   return (
     <OnboardingContainer
-      title="Grant Permissions"
-      description="Meetily needs access to your microphone and system audio to record meetings"
+      title={t('permissions_title')}
+      description={t('permissions_subtitle')}
       step={4}
       hideProgress={true}
       showNavigation={allPermissionsGranted}
       canGoNext={allPermissionsGranted}
     >
       <div className="max-w-lg mx-auto space-y-6">
-        {/* Permission Rows */}
         <div className="space-y-4">
-          {/* Microphone */}
           <PermissionRow
             icon={<Mic className="w-5 h-5" />}
-            title="Microphone"
-            description="Required to capture your voice during meetings"
+            title={t('permissions_mic')}
+            description={t('permissions_mic_desc')}
             status={permissions.microphone}
             isPending={isPending}
             onAction={handleMicrophoneAction}
           />
-
-          {/* System Audio */}
           <PermissionRow
             icon={<Volume2 className="w-5 h-5" />}
-            title="System Audio"
-            description="Click Enable to grant Audio Capture permission"
+            title={t('permissions_audio')}
+            description={t('permissions_audio_desc')}
             status={permissions.systemAudio}
             isPending={isPending}
             onAction={handleSystemAudioAction}
           />
         </div>
 
-        {/* Action Buttons */}
         <div className="flex flex-col gap-3 pt-4">
           <Button onClick={handleFinish} disabled={!allPermissionsGranted} className="w-full h-11">
-            Finish Setup
+            {t('permissions_finish')}
           </Button>
-
           <button
             onClick={handleSkip}
             className="text-sm text-neutral-500 hover:text-neutral-700 transition-colors"
           >
-            I'll do this later
+            {t('permissions_skip')}
           </button>
-
           {!allPermissionsGranted && (
             <p className="text-xs text-center text-muted-foreground">
-              Recording won't work without permissions. You can grant them later in settings.
+              {t('permissions_warning')}
             </p>
           )}
         </div>
