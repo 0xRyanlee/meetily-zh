@@ -133,7 +133,8 @@ export default function SubtitleOverlayPage() {
       const newH = Math.max(80, resizeStartRef.current.h + dh);
       try {
         const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
-        await getCurrentWebviewWindow().setSize({ type: 'Physical', width: Math.round(newW), height: Math.round(newH) });
+        const { PhysicalSize } = await import('@tauri-apps/api/dpi');
+        await getCurrentWebviewWindow().setSize(new PhysicalSize(Math.round(newW), Math.round(newH)));
       } catch {}
     };
 
