@@ -16,6 +16,10 @@ on:
       release-id:
         required: false
         type: string
+      release-version:
+        required: false
+        type: string
+        default: ""
       asset-prefix:
         required: false
         type: string
@@ -61,8 +65,13 @@ jobs:
         id: get-version
         shell: bash
         run: |
-          VERSION=$(grep -o '"version": "[^"]*"' frontend/src-tauri/tauri.conf.json | cut -d'"' -f4)
-          echo "Application version from tauri.conf.json: $VERSION"
+          if [[ -n "${{ inputs.release-version }}" ]]; then
+            VERSION="${{ inputs.release-version }}"
+            echo "Release version from workflow input: $VERSION"
+          else
+            VERSION=$(grep -o '"version": "[^"]*"' frontend/src-tauri/tauri.conf.json | cut -d'"' -f4)
+            echo "Application version from tauri.conf.json: $VERSION"
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Determine build profile

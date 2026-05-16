@@ -2,6 +2,11 @@ name: "Release"
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without leading v. Defaults to tauri.conf.json when omitted."
+        required: false
+        type: string
   push:
     tags:
       - 'v*'
@@ -19,55 +24,52 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       release-id: ${{ steps.create-release.outputs.result }}
-      version: ${{ steps.get-version.outputs.version }}
+      version: ${{ steps.resolve-version.outputs.version }}
+      source-ref: ${{ steps.resolve-version.outputs.source-ref }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Fetch all tags
 
-      - name: Get version from tauri.conf.json and check for existing tags
-        id: get-version
+      - name: Resolve release version
+        id: resolve-version
         shell: bash
         run: |
-          BASE_VERSION=$(grep -o '"version": "[^"]*"' frontend/src-tauri/tauri.conf.json | cut -d'"' -f4)
-          echo "Base version from tauri.conf.json: $BASE_VERSION"
-
-          # Fetch all tags
           git fetch --tags
 
-          # Check if base version tag exists
-          if git tag -l "v${BASE_VERSION}" | grep -q .; then
-            echo "Tag v${BASE_VERSION} already exists, looking for minor updates..."
+          if [[ "${GITHUB_REF_TYPE}" == "tag" && "${GITHUB_REF_NAME}" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            SOURCE_REF="${GITHUB_REF}"
+            echo "Using pushed tag version: $VERSION"
+          elif [[ -n "${{ github.event.inputs.version }}" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+            VERSION="${VERSION#v}"
+            echo "Using workflow_dispatch version: $VERSION"
 
-            # Find all existing minor versions (e.g., 0.1.1.1, 0.1.1.2, etc.)
-            LATEST_MINOR=0
-            for i in $(seq 1 100); do
-              if git tag -l "v${BASE_VERSION}.${i}" | grep -q .; then
-                LATEST_MINOR=$i
-              else
-                break
-              fi
-            done
-
-            # Increment to next minor version
-            NEXT_MINOR=$((LATEST_MINOR + 1))
-
-            if [ $NEXT_MINOR -gt 100 ]; then
-              echo "ERROR: Maximum minor version (100) reached for ${BASE_VERSION}"
-              echo "Please update the version in tauri.conf.json"
-              exit 1
+            if git rev-parse "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+              SOURCE_REF="refs/tags/v${VERSION}"
+              echo "Using existing tag ref: $SOURCE_REF"
+            else
+              SOURCE_REF="${GITHUB_SHA}"
+              echo "Tag v${VERSION} not found, using current commit: $SOURCE_REF"
             fi
-
-            VERSION="${BASE_VERSION}.${NEXT_MINOR}"
-            echo "Using minor update version: $VERSION"
           else
+            BASE_VERSION=$(grep -o '"version": "[^"]*"' frontend/src-tauri/tauri.conf.json | cut -d'"' -f4)
             VERSION="${BASE_VERSION}"
-            echo "Using base version: $VERSION"
+            SOURCE_REF="${GITHUB_SHA}"
+            echo "Using tauri.conf.json version: $VERSION"
+          fi
+
+          if [[ ! "$VERSION" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+            echo "ERROR: Unsupported version format: $VERSION"
+            exit 1
           fi
 
           echo "Final version: $VERSION"
+          echo "Source ref: $SOURCE_REF"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "source-ref=$SOURCE_REF" >> "$GITHUB_OUTPUT"
 
       - name: Create Draft Release
         id: create-release
@@ -77,8 +79,8 @@ jobs:
             const { data } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              tag_name: `v${{ steps.get-version.outputs.version }}`,
-              name: `Meetily ZH v${{ steps.get-version.outputs.version }}`,
+              tag_name: `v${{ steps.resolve-version.outputs.version }}`,
+              name: `Meetily ZH v${{ steps.resolve-version.outputs.version }}`,
               draft: true,
               prerelease: false,
               generate_release_notes: true
@@ -112,6 +114,8 @@ jobs:
       asset-prefix: "meetily-zh"
       upload-artifacts: false  # tauri-action uploads directly to release
       release-id: ${{ needs.create-release.outputs.release-id }}
+      release-version: ${{ needs.create-release.outputs.version }}
+      ref: ${{ needs.create-release.outputs.source-ref }}
     secrets: inherit
 
   # STEP 3: Show release summary
